@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import Avatar from "../../assets/profile.webp";
 import Input from "../../components/Input";
 import { io } from "socket.io-client";
@@ -12,6 +12,7 @@ const Dashboard = () => {
   const [messages, setMessages] = useState({});
   const [message, setMessage] = useState("");
   const [socket, setSocket] = useState(null);
+  const messageRef = useRef(null);
 
   console.log(messages, "yeh messages");
   useEffect(() => {
@@ -19,7 +20,7 @@ const Dashboard = () => {
   }, []);
 
   useEffect(() => {
-    if (!socket) return; // Exit if socket is not initialized
+    if (!socket) return;
 
     socket.emit("addUser", user?.id);
 
@@ -38,7 +39,6 @@ const Dashboard = () => {
       }));
     });
 
-    // Cleanup listeners on unmount
     return () => {
       socket.off("getUsers");
       socket.off("getMessage");
@@ -60,10 +60,10 @@ const Dashboard = () => {
         );
         console.log(res, "res conversation");
 
-        const resData = await res.json(); // Parse JSON response
+        const resData = await res.json();
         console.log(resData, "resData conversation");
 
-        setConversation(resData); // Set the conversation data
+        setConversation(resData);
       } catch (error) {
         console.error("Error fetching conversations:", error);
       }
@@ -135,7 +135,6 @@ const Dashboard = () => {
       if (res.ok) {
         console.log("Message sent successfully");
 
-        // Add the message only locally; socket listener handles duplicates
         setMessages((prev) => ({
           ...prev,
           messages: [...(prev?.messages || []), newMessage],
@@ -150,9 +149,13 @@ const Dashboard = () => {
     }
   };
 
+  useEffect(() => {
+    messageRef?.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages?.messages]);
+
   return (
     <div className="w-screen flex">
-      <div className="w-[25%] h-screen bg-light">
+      <div className="w-[25%] h-screen bg-light overflow-scroll">
         <div className="flex items-center my-8 mx-14">
           <div className="border border-primary p-[2px] rounded-full ">
             <img src={Avatar} alt="User Avatar" width={75} height={75} />
@@ -241,16 +244,19 @@ const Dashboard = () => {
             {messages?.messages?.length > 0 ? (
               messages.messages.map(({ message, user: { id } = {} }) => {
                 return (
-                  <div
-                    className={`max-w-[40%] rounded-b-xl p-4 mb-6 
+                  <>
+                    <div
+                      className={`max-w-[40%] rounded-b-xl p-4 mb-6 
                       ${
                         id === user?.id
                           ? "bg-primary  text-white rounded-tl-xl ml-auto"
                           : "bg-light  rounded-tr-xl "
                       }`}
-                  >
-                    {message}
-                  </div>
+                    >
+                      {message}
+                    </div>
+                    <div ref={messageRef}></div>
+                  </>
                 );
               })
             ) : (
@@ -321,13 +327,13 @@ const Dashboard = () => {
         )}
       </div>
 
-      <div className="w-[25%] h-screen bg-light px-8 py-16">
+      <div className="w-[25%] h-screen bg-light px-8 py-16 overflow-scroll">
         <div className="text-primary text-lg">People</div>
         <div>
           {users?.length > 0 ? (
             users.map(({ userId, user }) => {
               return (
-                <div className="flex items-center py-8 border-b border-b-gray-300">
+                <div className="flex items-center py-8 border-b border-b-gray-300 ">
                   <div
                     className="cursor-pointer flex items-center"
                     onClick={() => fetchMessages("new", user)}
